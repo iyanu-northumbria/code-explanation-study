@@ -198,10 +198,10 @@ if not ss.started:
 
             "**What is the purpose of the study?**  \n"
             "This study looks at how computer-generated explanations of code can be made clearer for "
-            "people with different levels of programming experience. One AI tool changes a piece of code "
-            "(for example, making it more efficient), and a second AI tool explains what was changed. We "
-            "want to find out whether explanations that are matched to your level of experience are more "
-            "helpful and satisfying than a single general explanation.\n\n"
+            "people with different levels of programming experience. An LLM Model 1 generates a piece of code"
+            "in response to a prompt, and a second Model 2 provides explanation of the generated code"
+            "in response to a prompt adapted to your experience level. We want to find out whether explanations"
+            "that are matched to your level of experience are more helpful and satisfying than a single general explanation.\n\n"
 
             "**Why have I been invited to take part?**  \n"
             "You have been invited to take part as you meet the following criteria:\n"
