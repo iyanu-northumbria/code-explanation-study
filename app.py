@@ -33,7 +33,8 @@ from prompts import PROMPTS, PERSONAS, PERSONA_RANGES
 # ----------------------------------------------------------------------------
 # CONFIG  -- edit these
 # ----------------------------------------------------------------------------
-MS_FORMS_URL = "https://forms.office.com/your-form-link-here"   # <-- your MS Forms link
+MS_FORMS_URL = "https://forms.cloud.microsoft/e/p6K19C5aik"   # <-- Form 2 (questionnaire)
+CONSENT_FORM_URL = "https://forms.cloud.microsoft/e/MfaQxCW2Qs"  # <-- Form 1 (durable consent record)
 PROMPTS_PER_PARTICIPANT = 2          # each participant sees 2 prompts (from their persona range)
 SHOW_ORIGINAL_PROMPT = False         # keep False so the task isn't revealed (avoids bias)
 GENERATE_LIVE = False                # keep False for the study. True = generate live (DANGER: see below)
@@ -114,9 +115,15 @@ def assign_prompts(participant_code: str, persona: str, n: int = 2):
 
 
 def forms_link(participant_code: str) -> str:
-    """The single questionnaire link, with the participant code prefilled if the form reads it."""
+    """The single questionnaire link (Form 2), with the participant code prefilled if the form reads it."""
     sep = "&" if "?" in MS_FORMS_URL else "?"
     return f"{MS_FORMS_URL}{sep}pid={participant_code}"
+
+
+def consent_form_link(participant_code: str) -> str:
+    """The durable consent form link (Form 1), with the participant code prefilled if the form reads it."""
+    sep = "&" if "?" in CONSENT_FORM_URL else "?"
+    return f"{CONSENT_FORM_URL}{sep}pid={participant_code}"
 
 
 # ----------------------------------------------------------------------------
@@ -304,11 +311,17 @@ if not ss.started:
     agreed = [st.checkbox(s, key=f"c{i}") for i, s in enumerate(CONSENT_STATEMENTS)]
     all_agreed = all(agreed)
 
+    # Durable consent record: participant completes the short consent form (Form 1).
+    if code_valid and all_agreed:
+        st.info("One more step: please complete the short consent form to record your consent, "
+                "then return here and click the button below to begin.")
+        st.link_button("Open the consent form", consent_form_link(ss.participant))
+
     ready = code_valid and all_agreed
     if st.button("I consent — begin the study", type="primary", disabled=not ready):
         st.query_params["pid"] = ss.participant     # persist code in URL for refresh
         ss.persona = persona
-        record_consent(ss.participant, persona)      # best-effort; durable record is in Forms
+        record_consent(ss.participant, persona)      # best-effort; durable record is in Form 1
         ss.assigned = assign_prompts(ss.participant, persona, PROMPTS_PER_PARTICIPANT)
         ss.idx = 0
         ss.started = True
