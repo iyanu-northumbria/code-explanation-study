@@ -4,11 +4,11 @@ prompts.py
 The prompt bank for the adaptive-explanation study.
 
 Structure (agreed with Dr Panda, Week 7):
-  - 9 LLM 1 prompts (code-generation problems), complexity-graded.
+  - 10 LLM 1 prompts (code-generation problems), complexity-graded.
   - Each LLM 1 prompt has 3 persona-adapted LLM 2 interpretation prompts
-    (beginner / intermediate / senior)  ->  9 x 3 = 27 interpretation prompts.
+    (beginner / intermediate / senior)  ->  10 x 3 = 30 interpretation prompts.
   - Plus one GENERIC interpretation prompt per problem for the control condition
-    (used to test the hypothesis: adapted explanations beat generic ones).
+    (parked as possible future work; not part of the current adaptive-only study).
 
 IMPORTANT (the core mechanism rule):
   LLM 2 never sees the original LLM 1 prompt. It receives ONLY the generated code
@@ -18,6 +18,12 @@ IMPORTANT (the core mechanism rule):
 The persona is folded into the interpretation prompt text. Each persona is given a
 different *operation type* (analogy/trace, transformation, critique, etc.) so the
 three explanations differ in kind, not just reading level.
+
+FIX (data-integrity): Prompt 10's llm1 was reworded. It previously said
+"Build an end-to-end pipeline ... and surface the key algorithmic and complexity
+decisions", which led the Operator to return an ASCII architecture diagram instead
+of code. It now explicitly requests runnable Python functions. (A uniform code-only
+instruction is also appended to every llm1 at generation time in pregenerate.py.)
 """
 
 PERSONAS = ["beginner", "intermediate", "senior"]
@@ -210,7 +216,13 @@ PROMPTS = [
     {
         "id": 10,
         "label": "End-to-end pipeline",
-        "llm1": "Build an end-to-end pipeline: retrieve multi-source data, perform a statistical comparison against a published baseline, visualise the result, and surface the key algorithmic and complexity decisions made along the way.",
+        "llm1": (
+            "Write complete, runnable Python code for a script that retrieves data from multiple "
+            "sources (for example a CSV/API source, a database source, and a JSON source), performs "
+            "a statistical comparison of the combined data against a published baseline, and produces "
+            "a visualisation of the result. Implement each stage (retrieval, merge, comparison, "
+            "visualisation) as actual Python functions."
+        ),
         "llm2": {
             "beginner": (
                 "Explain this code to a BEGINNER. Give the big picture of what it does from beginning to end in plain language, using an analogy, "

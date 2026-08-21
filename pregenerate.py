@@ -19,6 +19,14 @@ Mechanism (per the agreed design):
 
 Output: stimuli.json  ->  { prompt_id: { "llm1_prompt", "code",
                               "explanations": { persona: text, ... "generic": text } } }
+
+FIXES (data-integrity):
+  * MAX_TOKENS raised from 1500 -> 8000. At 1500, long code AND long explanations
+    were silently truncated (prompts 5,6,7,9 code; many explanations across 5-10).
+  * A stop_reason guard now makes ANY truncation fail LOUDLY at generation time,
+    so a clipped output can never again be saved into stimuli.json unnoticed.
+  * A uniform "code only" instruction is appended to every Stage-1 prompt so the
+    Operator returns runnable Python, not an architecture diagram (prompt 10 bug).
 """
 
 import json
@@ -28,7 +36,7 @@ from prompts import PROMPTS, PERSONAS, GENERIC_INTERPRETATION
 # ----------------------------------------------------------------------------
 # CONFIG
 # ----------------------------------------------------------------------------
-LIVE = True   # True = call the real Claude API (needs ANTHROPIC_API_KEY). False = mock text.
+LIVE = False   # True = call the real Claude API (needs ANTHROPIC_API_KEY). False = mock text.
 
 # BOTH stages use the SAME model (supervisor's requirement). Using one model isolates
 # the effect of the persona-adapted PROMPT from any difference in model capability: if
@@ -44,8 +52,18 @@ MODEL = "claude-opus-4-8"
 LLM1_MODEL = "claude-opus-4-8"   # do not change independently -- both stages must match
 LLM2_MODEL = "claude-opus-4-8"   # do not change independently -- both stages must match
 
-MAX_TOKENS = 1500
+# Raised from 1500. Long code and long explanations were being clipped at 1500 tokens.
+# 8000 comfortably covers the most verbose senior explanations and the largest programs.
+MAX_TOKENS = 8000
 OUTPUT_PATH = "stimuli.json"
+
+# Appended to every Stage-1 (code generation) prompt. Forces runnable Python output and
+# blocks the "draw the pipeline as a diagram" failure seen on the end-to-end prompt.
+CODE_ONLY_SUFFIX = (
+    "\n\nWrite complete, runnable Python code only. Return the code inside a single "
+    "```python ... ``` block. Do not include diagrams, ASCII art, flowcharts, or any "
+    "explanatory prose outside brief inline comments."
+)
 
 
 # ----------------------------------------------------------------------------
@@ -67,6 +85,13 @@ def call_claude(model: str, prompt: str) -> str:
         max_tokens=MAX_TOKENS,
         messages=[{"role": "user", "content": prompt}],
     )
+    # GUARD: if the model hit the token ceiling, the output is truncated. Fail loudly
+    # rather than silently saving a clipped result into stimuli.json.
+    if getattr(resp, "stop_reason", None) == "max_tokens":
+        raise RuntimeError(
+            f"Output TRUNCATED: hit max_tokens={MAX_TOKENS} for model {model}. "
+            f"Raise MAX_TOKENS and regenerate. Prompt began: {prompt[:100]!r}"
+        )
     # Concatenate any text blocks in the response.
     return "".join(block.text for block in resp.content if getattr(block, "type", "") == "text")
 
@@ -89,7 +114,7 @@ def extract_code(text: str) -> str:
 # ----------------------------------------------------------------------------
 def generate_code(llm1_prompt: str) -> str:
     """Stage 1 (Context A): generate code from the original problem prompt."""
-    raw = call_claude(LLM1_MODEL, llm1_prompt)
+    raw = call_claude(LLM1_MODEL, llm1_prompt + CODE_ONLY_SUFFIX)
     return extract_code(raw)
 
 
@@ -134,12 +159,14 @@ def main():
         "LLM1_MODEL and LLM2_MODEL must be the SAME model (set via MODEL). "
         "Using different models would confound the study."
     )
-    print(f"Using single model for both stages: {MODEL}\n")
+    print(f"Using single model for both stages: {MODEL}")
+    print(f"MAX_TOKENS = {MAX_TOKENS} (truncation guard active)\n")
     stimuli = build_stimuli()
     with open(OUTPUT_PATH, "w") as f:
         json.dump(stimuli, f, indent=2)
     mode = "LIVE (real Claude API)" if LIVE else "MOCK (placeholder text)"
     print(f"\nWrote {OUTPUT_PATH} for {len(stimuli)} prompts in {mode} mode.")
+    print("Now run:  python validate_stimuli.py   to confirm every stimulus is clean.")
     if not LIVE:
         print("Set LIVE = True and export ANTHROPIC_API_KEY to generate real explanations.")
 
