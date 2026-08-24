@@ -19,8 +19,6 @@ Design notes:
     refresh restores identity without retyping.
   - Only the persona-adapted (adaptive) explanation is shown. A generic/control condition
     is parked as possible FUTURE WORK and is not part of the current study.
-
-Run:  streamlit run app.py
 """
 
 import json
@@ -33,33 +31,30 @@ from prompts import PROMPTS, PERSONAS, PERSONA_RANGES
 # ----------------------------------------------------------------------------
 # CONFIG  -- edit these
 # ----------------------------------------------------------------------------
-MS_FORMS_URL = "https://forms.cloud.microsoft/e/p6K19C5aik"   # <-- Form 2 (questionnaire)
-CONSENT_FORM_URL = "https://forms.cloud.microsoft/e/MfaQxCW2Qs"  # <-- Form 1 (durable consent record)
+MS_FORMS_URL = "https://forms.cloud.microsoft/e/p6K19C5aik"   # Form 2 (questionnaire)
+CONSENT_FORM_URL = "https://forms.cloud.microsoft/e/MfaQxCW2Qs"  # Form 1 (consent record if streamlit cache disappears)
 PROMPTS_PER_PARTICIPANT = 2          # each participant sees 2 prompts (from their persona range)
-SHOW_ORIGINAL_PROMPT = False         # keep False so the task isn't revealed (avoids bias)
-GENERATE_LIVE = False                # keep False for the study. True = generate live (DANGER: see below)
+SHOW_ORIGINAL_PROMPT = False         # False so the task isn't revealed (avoids bias)
+GENERATE_LIVE = False                # keep False for the study. True = generate live
 
 # ============================================================================
 # PARTICIPANT ROSTER  --  READ BEFORE THE STUDY
 # ----------------------------------------------------------------------------
-# Design A (researcher pre-assignment): YOU classify each participant BEFORE their
-# session, applying the years-of-experience rule to what they told you at recruitment:
+# Design A (researcher pre-assignment): Each participant is classified before their
+# session, applying the years-of-experience rule
 #     < 2 years            -> "beginner"
 #     >= 2 and <= 5 years  -> "intermediate"
 #     > 5 years            -> "senior"
-# Then record each real code -> level below and build their link (…/?pid=CODE).
+# 
 #
-# ⚠️  The P01–P12 entries below are PLACEHOLDERS assigned 4/4/4 for testing only.
-#     DO NOT use them for real data. Replace them with your actual participant codes
-#     and their rule-based levels before collecting data. Aim to recruit roughly four
-#     participants in each band so the personas stay balanced.
+# 
 # ============================================================================
 PARTICIPANT_PERSONA = {
     "P01": "beginner", "P02": "beginner", "P03": "beginner", "P04": "beginner",
     "P05": "intermediate", "P06": "intermediate", "P07": "intermediate", "P08": "intermediate",
     "P09": "senior", "P10": "senior", "P11": "senior", "P12": "senior",
 }
-# Registration order (derived from the roster) -- used for balanced coverage.
+# Registration order (derived from the roster) 
 ASSIGNMENT_ORDER = list(PARTICIPANT_PERSONA.keys())
 
 PROMPTS_BY_ID = {p["id"]: p for p in PROMPTS}
@@ -155,7 +150,7 @@ def record_consent(participant_code: str, persona: str):
             w.writerow([datetime.datetime.now().isoformat(timespec="seconds"),
                         participant_code, persona, len(CONSENT_STATEMENTS), "yes"])
     except Exception:
-        pass  # durable record is in MS Forms; never block the participant
+        pass  # durable record is in MS Forms; 
 
 
 # ----------------------------------------------------------------------------
