@@ -20,9 +20,8 @@ Mechanism (per the agreed design):
 Output: stimuli.json  ->  { prompt_id: { "llm1_prompt", "code",
                               "explanations": { persona: text, ... "generic": text } } }
 
-FIXES (data-integrity):
-  * MAX_TOKENS raised from 1500 -> 8000. At 1500, long code AND long explanations
-    were silently truncated (prompts 5,6,7,9 code; many explanations across 5-10).
+FIXES:
+  * MAX_TOKENS raised from 1500 -> 8000.
   * A stop_reason guard now makes ANY truncation fail LOUDLY at generation time,
     so a clipped output can never again be saved into stimuli.json unnoticed.
   * A uniform "code only" instruction is appended to every Stage-1 prompt so the
@@ -38,22 +37,20 @@ from prompts import PROMPTS, PERSONAS, GENERIC_INTERPRETATION
 # ----------------------------------------------------------------------------
 LIVE = False   # True = call the real Claude API (needs ANTHROPIC_API_KEY). False = mock text.
 
-# BOTH stages use the SAME model (supervisor's requirement). Using one model isolates
+# BOTH stages use the SAME model. Using one model isolates
 # the effect of the persona-adapted PROMPT from any difference in model capability: if
 # LLM 1 and LLM 2 were different models, a difference in explanation quality could be
 # due to the models rather than the adaptation. The separation between the two stages
-# is CONTEXTUAL -- LLM 2 never sees LLM 1's prompt -- not a difference in model.
+# is CONTEXTUAL. LLM 2 never sees LLM 1's prompt.
 #
-# Set MODEL to the single Claude model you are using. Verify the exact string in the
-# Anthropic Console before running (model IDs change). Current options include
-# "claude-opus-4-8" (most capable) or "claude-sonnet-4-6" (faster/cheaper, very capable).
+# MODEL is set to the Claude opus 4.8. 
 MODEL = "claude-opus-4-8"
 
-LLM1_MODEL = "claude-opus-4-8"   # do not change independently -- both stages must match
-LLM2_MODEL = "claude-opus-4-8"   # do not change independently -- both stages must match
+LLM1_MODEL = "claude-opus-4-8"   # not to be changed independently
+LLM2_MODEL = "claude-opus-4-8"   # not to be changed independently
 
-# Raised from 1500. Long code and long explanations were being clipped at 1500 tokens.
-# 8000 comfortably covers the most verbose senior explanations and the largest programs.
+
+# 8000 comfortably covers the most senior explanations and the largest programs.
 MAX_TOKENS = 8000
 OUTPUT_PATH = "stimuli.json"
 
@@ -100,7 +97,7 @@ def extract_code(text: str) -> str:
     """Pull the code out of LLM 1's response (first fenced block if present)."""
     if "```" in text:
         parts = text.split("```")
-        # parts[1] is the first fenced block; strip an optional language tag on line 1.
+      
         block = parts[1]
         lines = block.splitlines()
         if lines and lines[0].strip().isalpha():
@@ -125,7 +122,7 @@ def interpret(code: str, interpretation_prompt: str) -> str:
 
 
 # ----------------------------------------------------------------------------
-# DRIVER
+# prompt allocation mechanism
 # ----------------------------------------------------------------------------
 def build_stimuli() -> dict:
     stimuli = {}
